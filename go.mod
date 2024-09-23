@@ -1,4 +1,4 @@
-module github.com/hardcore-os/plato
+module github.com/feichai0017/plato
 
 go 1.18
 
