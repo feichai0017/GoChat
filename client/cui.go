@@ -111,6 +111,7 @@ func viewUpScroll(g *gocui.Gui, cv *gocui.View) error {
 	v.Autoscroll = false
 	ox, oy := v.Origin()
 	if err == nil {
+		/* trunk-ignore(golangci-lint/errcheck) */
 		v.SetOrigin(ox, oy-1)
 	}
 	return nil
@@ -125,6 +126,7 @@ func viewDownScroll(g *gocui.Gui, cv *gocui.View) error {
 		if oy > lnum-y-1 {
 			v.Autoscroll = true
 		} else {
+			/* trunk-ignore(golangci-lint/errcheck) */
 			v.SetOrigin(ox, oy+1)
 		}
 	}
