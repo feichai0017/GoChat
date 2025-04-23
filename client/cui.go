@@ -86,7 +86,7 @@ func doSay(g *gocui.Gui, cv *gocui.View) {
 		if p != nil {
 			msg := &sdk.Message{
 				Type:       sdk.MsgTypeText,
-				Name:       "logic",
+				Name:       "eric",
 				FormUserID: "123213",
 				ToUserID:   "222222",
 				Content:    string(p)}
@@ -170,7 +170,7 @@ func viewHead(g *gocui.Gui, x0, y0, x1, y1 int) error {
 		}
 		v.Wrap = false
 		v.Overwrite = true
-		msg := "开始聊天了!"
+		msg := "Welcome to GoChat!"
 		setHeadText(g, msg)
 	}
 	return nil
@@ -224,9 +224,9 @@ func pasteDown(g *gocui.Gui, cv *gocui.View) error {
 }
 
 func RunMain() {
-	// step1 创建caht的核心对象
-	chat = sdk.NewChat("127.0.0.1:8080", "logic", "12312321", "2131")
-	// step2 创建 GUI 图层对象并进行参与与回调函数的配置
+	// step1 create chat core object
+	chat = sdk.NewChat("127.0.0.1:8080", "eric", "12312321", "2131")
+	// step2 create GUI layer object and configure participation and callback functions
 	g, err := gocui.NewGui(gocui.OutputNormal)
 	if err != nil {
 		log.Panicln(err)
@@ -235,10 +235,10 @@ func RunMain() {
 	g.Cursor = true
 	g.Mouse = false
 	g.ASCII = false
-	// 设置编排函数
+	// set layout function
 	g.SetManagerFunc(layout)
 
-	// 注册回调事件
+	// register callback events
 	if err := g.SetKeybinding("main", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)
 	}
@@ -258,7 +258,7 @@ func RunMain() {
 	if err := g.SetKeybinding("main", gocui.KeyArrowUp, gocui.ModNone, pasteUP); err != nil {
 		log.Panicln(err)
 	}
-	// 启动消费函数
+	// start consume function
 	go doRecv(g)
 	if err := g.MainLoop(); err != nil {
 		log.Println(err)
