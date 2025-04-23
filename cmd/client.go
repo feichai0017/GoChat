@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/feichai0017/plato/client"
+	"github.com/feichai0017/GoChat/client"
 	"github.com/spf13/cobra"
 )
 

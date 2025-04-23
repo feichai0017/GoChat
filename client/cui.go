@@ -7,7 +7,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/feichai0017/plato/client/sdk"
+	"github.com/feichai0017/GoChat/client/sdk"
 	"github.com/gookit/color"
 	"github.com/rocket049/gocui"
 )

@@ -1,6 +1,6 @@
-# Plato - A Distributed IM System
+# GoChat - A Distributed IM System
 
-Plato is a distributed instant messaging system built with Go, featuring a console-based user interface and client-server architecture.
+GoChat is a distributed instant messaging system built with Go, featuring a console-based user interface and client-server architecture.
 
 ## Features
 
