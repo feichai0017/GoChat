@@ -11,8 +11,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	ConfigPath string
+)
+
 func init() {
 	cobra.OnInitialize(initConfig)
+	rootCmd.PersistentFlags().StringVar(&ConfigPath, "config", "./gochat.yaml", "config file (default is ./gochat.yaml)")
 }
 
 var rootCmd = &cobra.Command{
@@ -35,10 +40,9 @@ func Execute() {
 }
 
 func GoChat(cmd *cobra.Command, args []string) {
-	// Enhanced ASCII Art and Info
 	color.Cyan.Println(`
   ██████╗  ██████╗  ██████╗ ██╗  ██╗ █████╗ ████████╗
- ██╔════╝ ██║   ██╗██╔════╝ ██║  ██║██╔══██╗╚══██╔══╝
+ ██╔════╝ ██╔═══██╗██╔════╝ ██║  ██║██╔══██╗╚══██╔══╝
  ██║  ███╗██║   ██║██║      ███████║███████║   ██║
  ██║   ██║██║   ██║██║      ██╔══██║██╔══██║   ██║
  ╚██████╔╝╚██████╔╝╚██████╗ ██║  ██║██║  ██║   ██║
@@ -52,7 +56,6 @@ func GoChat(cmd *cobra.Command, args []string) {
 	color.FgLightCyan.Printf(" PID: %d | Started: %s | Type 'help' or 'exit' ", pid, time.Now().Format("15:04:05"))
 	fmt.Println() // Add a newline for spacing
 
-	// --- Interactive Shell Logic ---
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		color.New(color.FgGreen, color.OpBold).Print("gochat > ")
