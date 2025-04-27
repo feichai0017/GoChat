@@ -21,6 +21,7 @@ func HelpHandle(cmd *cobra.Command, args []string) {
 	fmt.Println("")
 	fmt.Println("Available Commands:")
 	fmt.Println("  client     Start the client chat window")
+	fmt.Println("  ipconf     Get IP list of gateway")
 	fmt.Println("  help       Display this help information")
 	fmt.Println("  exit       Exit the shell")
 	fmt.Println("")

@@ -40,13 +40,13 @@ func (s *ServiceDiscovery) WatchService(prefix string, set, del func(key, value 
 		set(string(kv.Key), string(kv.Value))
 	}
 
-	s.watcher(prefix, set, del)
+	s.watcher(prefix, resp.Header.Revision+1, set, del)
 	return nil
 }
 
 // watcher watches for prefix changes in the service discovery
-func (s *ServiceDiscovery) watcher(prefix string, set, del func(key, value string)) {
-	rch := s.cli.Watch(*s.ctx, prefix, clientv3.WithPrefix())
+func (s *ServiceDiscovery) watcher(prefix string, rev int64, set, del func(key, value string)) {
+	rch := s.cli.Watch(*s.ctx, prefix, clientv3.WithPrefix(), clientv3.WithRev(rev))
 	logger.CtxInfof(*s.ctx, "Watching prefix: %v now...", prefix)
 	for wresp := range rch {
 		for _, ev := range wresp.Events {

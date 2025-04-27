@@ -5,4 +5,21 @@ discovery:
     - localhost:2379
   timeout: 5
 ip_conf:
-  server_path: /gochat/ip_dispatcher
+  service_path: /gochat/ip_dispatcher
+prpc:
+  discov:
+    name: etcd
+    endpoints:
+      - localhost:2379
+  trace:
+    enable: true
+    url: http://127.0.0.1:14268/api/traces
+    service_name: gochat
+    sampler: 1.0
+gateway:
+  tcp_max_num: 70000
+  epoll_channel_num: 100
+  epoll_num: 8
+  epoll_wait_queue_size: 100
+  server_port: 8900
+  worker_pool_num: 1024
