@@ -14,9 +14,9 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// global variables
+// global object
 var ep *ePool    // epoll pool
-var tcpNum int32 // current service allowed to access the maximum tcp connection number
+var tcpNum int32 // current service allowed to accept max tcp connections
 
 type ePool struct {
 	eChan  chan *connection
@@ -24,8 +24,8 @@ type ePool struct {
 	eSize  int
 	done   chan struct{}
 
-	ln 	   *net.TCPListener
-	f  	   func(c *connection, ep *epoller)
+	ln *net.TCPListener
+	f  func(c *connection, ep *epoller)
 }
 
 func initEpoll(ln *net.TCPListener, f func(c *connection, ep *epoller)) {
@@ -46,9 +46,9 @@ func newEPool(ln *net.TCPListener, cb func(c *connection, ep *epoller)) *ePool {
 	}
 }
 
-// 创建一个专门处理 accept 事件的协程，与当前cpu的核数对应，能够发挥最大功效
+// create a dedicated process to handle accept events, corresponding to the number of current cpu cores, to maximize efficiency
 func (e *ePool) createAcceptProcess() {
-	for range runtime.NumCPU() {
+	for i := 0; i < runtime.NumCPU(); i++ {
 		go func() {
 			for {
 				conn, e := e.ln.AcceptTCP()
@@ -65,29 +65,26 @@ func (e *ePool) createAcceptProcess() {
 					}
 					fmt.Errorf("accept err: %v", e)
 				}
-				c := connection{
-					conn: conn,
-					fd:   socketFD(conn),
-				}
-				ep.addTask(&c)
+				c := NewConnection(conn)
+				ep.addTask(c)
 			}
 		}()
 	}
 }
 
 func (e *ePool) startEPool() {
-	for range e.eSize {
+	for i := 0; i < e.eSize; i++ {
 		go e.startEProc()
 	}
 }
 
-// epoller processor
+// epoller pool processor
 func (e *ePool) startEProc() {
 	ep, err := newEpoller()
 	if err != nil {
 		panic(err)
 	}
-	// listen connection create event
+	// listen connection creation event
 	go func() {
 		for {
 			select {
@@ -98,21 +95,20 @@ func (e *ePool) startEProc() {
 				fmt.Printf("tcpNum:%d\n", tcpNum)
 				if err := ep.add(conn); err != nil {
 					fmt.Printf("failed to add connection %v\n", err)
-					conn.Close() // login failed, close connection
+					conn.Close() // login failed, close connection directly
 					continue
 				}
 				fmt.Printf("EpollerPool new connection[%v] tcpSize:%d\n", conn.RemoteAddr(), tcpNum)
 			}
 		}
 	}()
-	// epoller here to wait, when wait occurs, call the callback function to process
+	// epoller here polling to wait, when wait occurs, call the callback function to process
 	for {
 		select {
 		case <-e.done:
 			return
 		default:
-			connections, err := ep.wait(200) // 200ms once to avoid busy-waiting
-
+			connections, err := ep.wait(200) // 200ms once polling to avoid busy-waiting
 			if err != nil && err != syscall.EINTR {
 				fmt.Printf("failed to epoll wait %v\n", err)
 				continue
@@ -133,7 +129,8 @@ func (e *ePool) addTask(c *connection) {
 
 // epoller object
 type epoller struct {
-	fd int
+	fd            int
+	fdToConnTable sync.Map
 }
 
 func newEpoller() (*epoller, error) {
@@ -146,16 +143,17 @@ func newEpoller() (*epoller, error) {
 	}, nil
 }
 
-// TODO: default level-triggered mode, can use non-blocking FD to optimize edge-triggered mode
+// TODO: default level-triggered mode, can use non-blocking FD, optimize edge-triggered mode
 func (e *epoller) add(conn *connection) error {
 	// Extract file descriptor associated with the connection
 	fd := conn.fd
-
 	err := unix.EpollCtl(e.fd, syscall.EPOLL_CTL_ADD, fd, &unix.EpollEvent{Events: unix.EPOLLIN | unix.EPOLLHUP, Fd: int32(fd)})
 	if err != nil {
 		return err
 	}
-	ep.tables.Store(fd, conn)
+	e.fdToConnTable.Store(conn.fd, conn)
+	ep.tables.Store(conn.id, conn)
+	conn.BindEpoller(e)
 	return nil
 }
 func (e *epoller) remove(c *connection) error {
@@ -165,7 +163,8 @@ func (e *epoller) remove(c *connection) error {
 	if err != nil {
 		return err
 	}
-	ep.tables.Delete(fd)
+	ep.tables.Delete(c.id)
+	e.fdToConnTable.Delete(c.fd)
 	return nil
 }
 func (e *epoller) wait(msec int) ([]*connection, error) {
@@ -175,8 +174,8 @@ func (e *epoller) wait(msec int) ([]*connection, error) {
 		return nil, err
 	}
 	var connections []*connection
-	for i := range n {
-		if conn, ok := ep.tables.Load(int(events[i].Fd)); ok {
+	for i := 0; i < n; i++ {
+		if conn, ok := e.fdToConnTable.Load(int(events[i].Fd)); ok {
 			connections = append(connections, conn.(*connection))
 		}
 	}

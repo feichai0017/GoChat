@@ -1,0 +1,31 @@
+package crpc
+
+import (
+	"context"
+	"testing"
+
+	"github.com/feichai0017/GoChat/common/config"
+
+	"github.com/feichai0017/GoChat/common/crpc/example/helloservice"
+
+	ptrace "github.com/feichai0017/GoChat/common/crpc/trace"
+	"google.golang.org/grpc"
+)
+
+const (
+	testIp   = "127.0.0.1"
+	testPort = 8867
+)
+
+func TestNewPServer(t *testing.T) {
+	config.Init("../../gochat.yaml")
+
+	ptrace.StartAgent()
+	defer ptrace.StopAgent()
+
+	s := NewPServer(WithServiceName("crpc_server"), WithIP(testIp), WithPort(testPort), WithWeight(100))
+	s.RegisterService(func(server *grpc.Server) {
+		helloservice.RegisterGreeterServer(server, helloservice.HelloServer{})
+	})
+	s.Start(context.TODO())
+}

@@ -12,7 +12,7 @@ var (
 )
 
 func RunMain() {
-	for i :=0; i < int(TcpConnNum); i++ {
+	for range int(TcpConnNum) {
 		sdk.NewChat(net.ParseIP("127.0.0.1"), 8900, "eric", "test", "test")
 	}
 }

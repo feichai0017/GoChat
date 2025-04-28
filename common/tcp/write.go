@@ -2,7 +2,7 @@ package tcp
 
 import "net"
 
-// 将指定数据包发送到网络中
+// send the specified data package to the network
 func SendData(conn *net.TCPConn, data []byte) error {
 	totalLen := len(data)
 	writeLen := 0

@@ -1,0 +1,19 @@
+global:
+  env: debug
+discovery:
+  endpoints:
+    - localhost:2379
+  timeout: 5
+ip_conf:
+  service_path: /gochat/ip_dispatcher
+crpc:
+  discov:
+    name: etcd
+    endpoints:
+      - localhost:2379
+  trace:
+    enable: true
+    url: http://127.0.0.1:14268/api/traces
+    service_name: crpc_server
+    sampler: 1.0
+
