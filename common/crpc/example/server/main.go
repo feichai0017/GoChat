@@ -24,7 +24,7 @@ func main() {
 	ptrace.StartAgent()
 	defer ptrace.StopAgent()
 
-	s := crpc.NewPServer(crpc.WithServiceName("crpc_server"), crpc.WithIP(testIp), crpc.WithPort(testPort), crpc.WithWeight(100))
+	s := crpc.NewCServer(crpc.WithServiceName("crpc_server"), crpc.WithIP(testIp), crpc.WithPort(testPort), crpc.WithWeight(100))
 	s.RegisterService(func(server *grpc.Server) {
 		helloservice.RegisterGreeterServer(server, helloservice.HelloServer{})
 	})
@@ -40,7 +40,7 @@ func currentFileDir() string {
 	}
 
 	dir := ""
-	for i := 0; i < len(parts)-1; i++ {
+	for i := range len(parts)-1 {
 		dir += "/" + parts[i]
 	}
 

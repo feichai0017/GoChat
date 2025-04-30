@@ -29,7 +29,7 @@ func RunMain(path string) {
 	// start command processing write coroutine
 	go cmdHandler()
 	// register rpc server
-	s := crpc.NewPServer(
+	s := crpc.NewCServer(
 		crpc.WithServiceName(config.GetStateServiceName()),
 		crpc.WithIP(config.GetSateServiceAddr()),
 		crpc.WithPort(config.GetSateServerPort()), crpc.WithWeight(config.GetSateRPCWeight()))

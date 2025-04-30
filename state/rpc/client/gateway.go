@@ -13,7 +13,7 @@ import (
 var gatewayClient service.GatewayClient
 
 func initGatewayClient() {
-	pCli, err := crpc.NewPClient(config.GetGatewayServiceName())
+	pCli, err := crpc.NewCClient(config.GetGatewayServiceName())
 	if err != nil {
 		panic(err)
 	}
@@ -25,13 +25,15 @@ func initGatewayClient() {
 }
 
 func DelConn(ctx *context.Context, connID uint64, Payload []byte) error {
-	rpcCtx, _ := context.WithTimeout(*ctx, 100*time.Millisecond)
+	rpcCtx, cancel := context.WithTimeout(*ctx, 100*time.Millisecond)
+	defer cancel()
 	gatewayClient.DelConn(rpcCtx, &service.GatewayRequest{ConnID: connID, Data: Payload})
 	return nil
 }
 
 func Push(ctx *context.Context, connID uint64, Payload []byte) error {
-	rpcCtx, _ := context.WithTimeout(*ctx, 100*time.Second)
+	rpcCtx, cancel := context.WithTimeout(*ctx, 100*time.Second)
+	defer cancel()
 	resp, err := gatewayClient.Push(rpcCtx, &service.GatewayRequest{ConnID: connID, Data: Payload})
 	if err != nil {
 		fmt.Println(err)

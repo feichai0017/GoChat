@@ -8,7 +8,7 @@ import (
 
 	"github.com/feichai0017/GoChat/common/crpc/example/helloservice"
 
-	ptrace "github.com/feichai0017/GoChat/common/crpc/trace"
+	ctrace "github.com/feichai0017/GoChat/common/crpc/trace"
 	"google.golang.org/grpc"
 )
 
@@ -17,13 +17,13 @@ const (
 	testPort = 8867
 )
 
-func TestNewPServer(t *testing.T) {
+func TestNewCServer(t *testing.T) {
 	config.Init("../../gochat.yaml")
 
-	ptrace.StartAgent()
-	defer ptrace.StopAgent()
+	ctrace.StartAgent()
+	defer ctrace.StopAgent()
 
-	s := NewPServer(WithServiceName("crpc_server"), WithIP(testIp), WithPort(testPort), WithWeight(100))
+	s := NewCServer(WithServiceName("crpc_server"), WithIP(testIp), WithPort(testPort), WithWeight(100))
 	s.RegisterService(func(server *grpc.Server) {
 		helloservice.RegisterGreeterServer(server, helloservice.HelloServer{})
 	})

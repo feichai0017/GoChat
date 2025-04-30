@@ -48,11 +48,11 @@ func newEPool(ln *net.TCPListener, cb func(c *connection, ep *epoller)) *ePool {
 
 // create a dedicated process to handle accept events, corresponding to the number of current cpu cores, to maximize efficiency
 func (e *ePool) createAcceptProcess() {
-	for i := 0; i < runtime.NumCPU(); i++ {
+	for range runtime.NumCPU() {
 		go func() {
 			for {
 				conn, e := e.ln.AcceptTCP()
-				// 限流熔断
+				// rate limiter
 				if !checkTcp() {
 					_ = conn.Close()
 					continue
@@ -73,7 +73,7 @@ func (e *ePool) createAcceptProcess() {
 }
 
 func (e *ePool) startEPool() {
-	for i := 0; i < e.eSize; i++ {
+	for range e.eSize {
 		go e.startEProc()
 	}
 }
@@ -147,6 +147,10 @@ func newEpoller() (*epoller, error) {
 func (e *epoller) add(conn *connection) error {
 	// Extract file descriptor associated with the connection
 	fd := conn.fd
+	// Set socket to non-blocking mode
+	if err := unix.SetNonblock(fd, true); err != nil {
+		return fmt.Errorf("failed to set socket non-blocking: %v", err)
+	}
 	err := unix.EpollCtl(e.fd, syscall.EPOLL_CTL_ADD, fd, &unix.EpollEvent{Events: unix.EPOLLIN | unix.EPOLLHUP, Fd: int32(fd)})
 	if err != nil {
 		return err
@@ -174,7 +178,7 @@ func (e *epoller) wait(msec int) ([]*connection, error) {
 		return nil, err
 	}
 	var connections []*connection
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if conn, ok := e.fdToConnTable.Load(int(events[i].Fd)); ok {
 			connections = append(connections, conn.(*connection))
 		}

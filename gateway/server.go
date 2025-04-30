@@ -30,7 +30,7 @@ func RunMain(path string) {
 	initEpoll(ln, runProc)
 	fmt.Println("-------------im gateway stated------------")
 	cmdChannel = make(chan *service.CmdContext, config.GetGatewayCmdChannelNum())
-	s := crpc.NewPServer(
+	s := crpc.NewCServer(
 		crpc.WithServiceName(config.GetGatewayServiceName()),
 		crpc.WithIP(config.GetGatewayServiceAddr()),
 		crpc.WithPort(config.GetGatewayRPCServerPort()), crpc.WithWeight(config.GetGatewayRPCWeight()))

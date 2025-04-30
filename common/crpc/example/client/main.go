@@ -19,7 +19,7 @@ func main() {
 	ptrace.StartAgent()
 	defer ptrace.StopAgent()
 
-	pCli, _ := crpc.NewPClient("crpc_server")
+	pCli, _ := crpc.NewCClient("crpc_server")
 
 	ctx, cancel := context.WithTimeout(context.TODO(), 100*time.Second)
 	defer cancel()

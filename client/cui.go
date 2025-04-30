@@ -87,11 +87,11 @@ func doSay(g *gocui.Gui, cv *gocui.View) {
 		if p != nil {
 			msg := &sdk.Message{
 				Type:       sdk.MsgTypeText,
-				Name:       "logic",
+				Name:       "eric",
 				FormUserID: "123213",
 				ToUserID:   "222222",
 				Content:    string(p)}
-			// 先把自己说的话显示到消息流中
+			// first print the message to the message stream
 			viewPrint(g, "me", msg.Content, false)
 			chat.Send(msg)
 		}

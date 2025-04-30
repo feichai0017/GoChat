@@ -5,15 +5,15 @@ import (
 
 	"github.com/feichai0017/GoChat/common/config"
 
-	ptrace "github.com/feichai0017/GoChat/common/crpc/trace"
+	ctrace "github.com/feichai0017/GoChat/common/crpc/trace"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewPClient(t *testing.T) {
+func TestNewCClient(t *testing.T) {
 	config.Init("../../gochat.yaml")
-	ptrace.StartAgent()
-	defer ptrace.StopAgent()
+	ctrace.StartAgent()
+	defer ctrace.StopAgent()
 
-	_, err := NewPClient("crpc_server")
+	_, err := NewCClient("crpc_server")
 	assert.NoError(t, err)
 }

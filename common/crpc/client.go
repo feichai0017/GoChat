@@ -7,6 +7,7 @@ import (
 
 	"github.com/feichai0017/GoChat/common/crpc/discov/plugin"
 
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/resolver"
 
 	"github.com/feichai0017/GoChat/common/crpc/discov"
@@ -21,16 +22,16 @@ const (
 	dialTimeout = 5 * time.Second
 )
 
-type PClient struct {
+type CClient struct {
 	serviceName  string
 	d            discov.Discovery
 	interceptors []grpc.UnaryClientInterceptor
 	conn         *grpc.ClientConn
 }
 
-// NewPClient ...
-func NewPClient(serviceName string, interceptors ...grpc.UnaryClientInterceptor) (*PClient, error) {
-	p := &PClient{
+// NewCClient ...
+func NewCClient(serviceName string, interceptors ...grpc.UnaryClientInterceptor) (*CClient, error) {
+	p := &CClient{
 		serviceName:  serviceName,
 		interceptors: interceptors,
 	}
@@ -53,11 +54,11 @@ func NewPClient(serviceName string, interceptors ...grpc.UnaryClientInterceptor)
 }
 
 // Conn return *grpc.ClientConn
-func (p *PClient) Conn() *grpc.ClientConn {
+func (p *CClient) Conn() *grpc.ClientConn {
 	return p.conn
 }
 
-func (p *PClient) dial() (*grpc.ClientConn, error) {
+func (p *CClient) dial() (*grpc.ClientConn, error) {
 	svcCfg := fmt.Sprintf(`{"loadBalancingPolicy":"%s"}`, roundrobin.Name)
 	balancerOpt := grpc.WithDefaultServiceConfig(svcCfg)
 
@@ -71,14 +72,22 @@ func (p *PClient) dial() (*grpc.ClientConn, error) {
 		balancerOpt,
 		grpc.WithChainUnaryInterceptor(interceptors...),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithChainUnaryInterceptor(interceptors...),
+		grpc.WithDefaultServiceConfig(svcCfg),
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), dialTimeout)
+	conn, err := grpc.NewClient(
+		fmt.Sprintf("discov:///%v", p.serviceName),
+		options...,
+	)
+	if err != nil {
+		return nil, err
+	}
 
-	return grpc.DialContext(ctx, fmt.Sprintf("discov:///%v", p.serviceName), options...)
+	return conn, nil
 }
 
-func (p *PClient) DialByEndPoint(adrss string) (*grpc.ClientConn, error) {
+func (p *CClient) DialByEndPoint(address string) (*grpc.ClientConn, error) {
 	interceptors := []grpc.UnaryClientInterceptor{
 		clientinterceptor.TraceUnaryClientInterceptor(),
 		clientinterceptor.MetricUnaryClientInterceptor(),
@@ -90,7 +99,28 @@ func (p *PClient) DialByEndPoint(adrss string) (*grpc.ClientConn, error) {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), dialTimeout)
 
-	return grpc.DialContext(ctx, adrss, options...)
+	conn, err := grpc.NewClient(address, options...)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, nil
+}
+
+// waitForReady check if the connection is ready
+func waitForReady(conn *grpc.ClientConn, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	for {
+		state := conn.GetState()
+		if state == connectivity.Ready {
+			return nil // success
+		}
+
+		if !conn.WaitForStateChange(ctx, state) {
+			return fmt.Errorf("gRPC connection not ready within %v (last state: %s)", timeout, state.String())
+		}
+	}
 }

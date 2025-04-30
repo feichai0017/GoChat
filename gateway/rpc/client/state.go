@@ -13,7 +13,7 @@ import (
 var stateClient service.StateClient
 
 func initStateClient() {
-	pCli, err := crpc.NewPClient(config.GetStateServiceName())
+	pCli, err := crpc.NewCClient(config.GetStateServiceName())
 	if err != nil {
 		panic(err)
 	}
@@ -25,8 +25,8 @@ func initStateClient() {
 }
 
 func CancelConn(ctx *context.Context, endpoint string, connID uint64, Payload []byte) error {
-	rpcCtx, _ := context.WithTimeout(*ctx, 100*time.Millisecond)
-
+	rpcCtx, cancel := context.WithTimeout(*ctx, 100*time.Millisecond)
+	defer cancel()
 	stateClient.CancelConn(rpcCtx, &service.StateRequest{
 		Endpoint: endpoint,
 		ConnID:   connID,
@@ -36,7 +36,8 @@ func CancelConn(ctx *context.Context, endpoint string, connID uint64, Payload []
 }
 
 func SendMsg(ctx *context.Context, endpoint string, connID uint64, Payload []byte) error {
-	rpcCtx, _ := context.WithTimeout(*ctx, 100*time.Millisecond)
+	rpcCtx, cancel := context.WithTimeout(*ctx, 100*time.Millisecond)
+	defer cancel()
 
 	fmt.Println("sendMsg", connID, string(Payload))
 	_, err := stateClient.SendMsg(rpcCtx, &service.StateRequest{
@@ -45,6 +46,7 @@ func SendMsg(ctx *context.Context, endpoint string, connID uint64, Payload []byt
 		Data:     Payload,
 	})
 	if err != nil {
+		fmt.Println("sendMsg error", err)
 		panic(err)
 	}
 	return nil

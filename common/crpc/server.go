@@ -20,7 +20,7 @@ import (
 
 type RegisterFn func(*grpc.Server)
 
-type PServer struct {
+type CServer struct {
 	serverOptions
 	registers    []RegisterFn
 	interceptors []grpc.UnaryServerInterceptor
@@ -72,7 +72,7 @@ func WithHealth(health bool) ServerOption {
 	}
 }
 
-func NewPServer(opts ...ServerOption) *PServer {
+func NewCServer(opts ...ServerOption) *CServer {
 	opt := serverOptions{}
 	for _, o := range opts {
 		o(&opt)
@@ -87,7 +87,7 @@ func NewPServer(opts ...ServerOption) *PServer {
 		opt.d = dis
 	}
 
-	return &PServer{
+	return &CServer{
 		opt,
 		make([]RegisterFn, 0),
 		make([]grpc.UnaryServerInterceptor, 0),
@@ -99,17 +99,17 @@ func NewPServer(opts ...ServerOption) *PServer {
 // p.RegisterService(func(server *grpc.Server) {
 //     test.RegisterGreeterServer(server, &Server{})
 // })
-func (p *PServer) RegisterService(register ...RegisterFn) {
+func (p *CServer) RegisterService(register ...RegisterFn) {
 	p.registers = append(p.registers, register...)
 }
 
-// RegisterUnaryServerInterceptor 注册自定义拦截器，例如限流拦截器或者自己的一些业务自定义拦截器
-func (p *PServer) RegisterUnaryServerInterceptor(i grpc.UnaryServerInterceptor) {
+// RegisterUnaryServerInterceptor register custom interceptor
+func (p *CServer) RegisterUnaryServerInterceptor(i grpc.UnaryServerInterceptor) {
 	p.interceptors = append(p.interceptors, i)
 }
 
-// Start 开启server
-func (p *PServer) Start(ctx context.Context) {
+// Start start server
+func (p *CServer) Start(ctx context.Context) {
 	service := discov.Service{
 		Name: p.serviceName,
 		Endpoints: []*discov.Endpoint{
@@ -123,7 +123,7 @@ func (p *PServer) Start(ctx context.Context) {
 		},
 	}
 
-	// 加载中间件
+	// load middleware
 	interceptors := []grpc.UnaryServerInterceptor{
 		serverinterceptor.RecoveryUnaryServerInterceptor(),
 		serverinterceptor.TraceUnaryServerInterceptor(),
@@ -133,7 +133,7 @@ func (p *PServer) Start(ctx context.Context) {
 
 	s := grpc.NewServer(grpc.ChainUnaryInterceptor(interceptors...))
 
-	// 注册服务
+	// register service
 	for _, register := range p.registers {
 		register(s)
 	}
@@ -148,7 +148,7 @@ func (p *PServer) Start(ctx context.Context) {
 			panic(err)
 		}
 	}()
-	// 服务注册
+	// register service
 	p.d.Register(ctx, &service)
 
 	logger.Info("start CRPC success")
