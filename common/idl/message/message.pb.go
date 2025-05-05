@@ -21,7 +21,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// cd common/idl; protoc -I message  --go_out=plugins=grpc:message  message/message.proto
+// cd common/idl; protoc -I message  --go_out=message --go-grpc_out=message  message/message.proto
 type CmdType int32
 
 const (
@@ -29,8 +29,8 @@ const (
 	CmdType_Heartbeat CmdType = 1
 	CmdType_ReConn    CmdType = 2
 	CmdType_ACK       CmdType = 3
-	CmdType_UP        CmdType = 4 // 上行消息
-	CmdType_Push      CmdType = 5 // 下行 推送消息
+	CmdType_UP        CmdType = 4 // UP message
+	CmdType_Push      CmdType = 5 // Push message
 )
 
 // Enum value maps for CmdType.
@@ -80,7 +80,7 @@ func (CmdType) EnumDescriptor() ([]byte, []int) {
 	return file_message_proto_rawDescGZIP(), []int{0}
 }
 
-// 顶层cmd pb结构
+// top-level cmd pb structure
 type MsgCmd struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Type          CmdType                `protobuf:"varint,1,opt,name=Type,proto3,enum=message.CmdType" json:"Type,omitempty"`
@@ -133,7 +133,7 @@ func (x *MsgCmd) GetPayload() []byte {
 	return nil
 }
 
-// 上行消息 pb结构
+// UP message
 type UPMsg struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Head          *UPMsgHead             `protobuf:"bytes,1,opt,name=Head,proto3" json:"Head,omitempty"`
@@ -186,7 +186,7 @@ func (x *UPMsg) GetUPMsgBody() []byte {
 	return nil
 }
 
-// 上行消息头 pb结构
+// UP message header
 type UPMsgHead struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ClientID      uint64                 `protobuf:"varint,1,opt,name=ClientID,proto3" json:"ClientID,omitempty"`
@@ -299,7 +299,7 @@ func (x *PushMsg) GetContent() []byte {
 	return nil
 }
 
-// ACK 消息
+// ACK message
 type ACKMsg struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Code          uint32                 `protobuf:"varint,1,opt,name=Code,proto3" json:"Code,omitempty"`
@@ -392,7 +392,7 @@ func (x *ACKMsg) GetMsgID() uint64 {
 	return 0
 }
 
-// 登陆消息
+// Login message
 type LoginMsgHead struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	DeviceID      uint64                 `protobuf:"varint,1,opt,name=DeviceID,proto3" json:"DeviceID,omitempty"`
@@ -489,7 +489,7 @@ func (x *LoginMsg) GetLoginMsgBody() []byte {
 	return nil
 }
 
-// 心跳消息
+// Heartbeat message
 type HeartbeatMsgHead struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -578,7 +578,7 @@ func (x *HeartbeatMsg) GetHeartbeatMsgBody() []byte {
 	return nil
 }
 
-// 重连消息
+// Reconnect message
 type ReConnMsgHead struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ConnID        uint64                 `protobuf:"varint,1,opt,name=ConnID,proto3" json:"ConnID,omitempty"`

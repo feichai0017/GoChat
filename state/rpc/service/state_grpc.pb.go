@@ -66,7 +66,7 @@ func (c *stateClient) SendMsg(ctx context.Context, in *StateRequest, opts ...grp
 // All implementations must embed UnimplementedStateServer
 // for forward compatibility.
 //
-// 网关机的 rpc server定义
+// state server rpc server definition
 // cd state/rpc 下 执行 protoc -I service --go_out=service --go-grpc_out=service service/state.proto
 type StateServer interface {
 	CancelConn(context.Context, *StateRequest) (*StateResponse, error)

@@ -27,7 +27,7 @@ func init() {
 
 	// add command line arguments
 	perfCmd.Flags().StringVarP(&testMode, "mode", "m", "connect", "Test mode: connect, send, receive, or full")
-	perfCmd.Flags().Int32VarP(&connectionNum, "connections", "c", 100, "Number of connections to create")
+	perfCmd.Flags().Int32VarP(&connectionNum, "connections", "c", 10000, "Number of connections to create")
 	perfCmd.Flags().Int32VarP(&messageNum, "messages", "n", 10, "Number of messages per connection")
 	perfCmd.Flags().Int32VarP(&messageSize, "size", "s", 128, "Message size in bytes")
 	perfCmd.Flags().IntVarP(&messageInterval, "interval", "i", 100, "Interval between messages (ms)")

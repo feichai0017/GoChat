@@ -27,8 +27,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// 网关机的 rpc server定义
-// cd gateway/rpc 下 执行 protoc -I service --go_out=plugins=grpc:service service/gateway.proto
+// gateway server rpc server definition
+// cd gateway/rpc 下 执行 protoc -I service --go_out=service --go-grpc_out=service service/gateway.proto
 type GatewayClient interface {
 	DelConn(ctx context.Context, in *GatewayRequest, opts ...grpc.CallOption) (*GatewayResponse, error)
 	Push(ctx context.Context, in *GatewayRequest, opts ...grpc.CallOption) (*GatewayResponse, error)
@@ -66,8 +66,8 @@ func (c *gatewayClient) Push(ctx context.Context, in *GatewayRequest, opts ...gr
 // All implementations must embed UnimplementedGatewayServer
 // for forward compatibility.
 //
-// 网关机的 rpc server定义
-// cd gateway/rpc 下 执行 protoc -I service --go_out=plugins=grpc:service service/gateway.proto
+// gateway server rpc server definition
+// cd gateway/rpc 下 执行 protoc -I service --go_out=service --go-grpc_out=service service/gateway.proto
 type GatewayServer interface {
 	DelConn(context.Context, *GatewayRequest) (*GatewayResponse, error)
 	Push(context.Context, *GatewayRequest) (*GatewayResponse, error)

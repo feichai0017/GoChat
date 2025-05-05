@@ -86,7 +86,7 @@ func (pq *priorityQueue) PeekAndShift(max int64) (*item, int64) {
 // an element can only be taken when its delay has expired. The head of the
 // queue is the *Delayed* element whose delay expired furthest in the past.
 type DelayQueue struct {
-	C chan interface{}
+	C chan any
 
 	mu sync.Mutex
 	pq priorityQueue

@@ -38,7 +38,7 @@ test:
 	$(GOTEST) -v ./...
 
 # update dependencies
-deps:
+tidy:
 	$(GOMOD) tidy
 
 # generate proto files
@@ -55,7 +55,7 @@ help:
 	@echo " make debug - Build for dlv debugging"
 	@echo " make clean - Clean build files"
 	@echo " make test - Run tests"
-	@echo " make deps - Update dependencies"
+	@echo " make tidy - Update dependencies"
 	@echo " make proto - Generate proto files"
 
-.PHONY: all build debug clean test deps proto help
+.PHONY: all build debug clean test tidy proto help

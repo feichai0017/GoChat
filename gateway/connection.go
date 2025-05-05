@@ -9,27 +9,26 @@ import (
 
 var node *ConnIDGenerater
 
-// 如果想要调整编码，就直接调整这里即可
 const (
-	version      = uint64(0) // 版本控制
+	version      = uint64(0) // version control
 	sequenceBits = uint64(16)
 
 	maxSequence = int64(-1) ^ (int64(-1) << sequenceBits)
 
-	timeLeft    = uint8(16) // timeLeft = sequenceBits // 时间戳向左偏移量
-	versionLeft = uint8(63) // 左移动到最高位
-	// 2020-05-20 08:00:00 +0800 CST
-	twepoch = int64(1589923200000) // 常量时间戳(毫秒)
+	timeLeft    = uint8(16) // timeLeft = sequenceBits // timeLeft to the left shift
+	versionLeft = uint8(63) // move to the highest bit
+	// 2022-11-25 00:00:00 +0800 CST
+	twepoch = int64(1669334400000) // constant timestamp (millisecond)
 )
 
 type ConnIDGenerater struct {
 	mu        sync.Mutex
-	LastStamp int64 // 记录上一次ID的时间戳
-	Sequence  int64 // 当前毫秒已经生成的ID序列号(从0 开始累加) 1毫秒内最多生成2^16个ID
+	LastStamp int64 // record the last ID timestamp
+	Sequence  int64 // current ID sequence number generated in 1 millisecond (from 0 to start)
 }
 
 type connection struct {
-	id   uint64 // 进程级别的生命周期
+	id   uint64 // unique ID
 	fd   int
 	e    *epoller
 	conn *net.TCPConn
@@ -47,7 +46,7 @@ func NewConnection(conn *net.TCPConn) *connection {
 	var id uint64
 	var err error
 	if id, err = node.NextID(); err != nil {
-		panic(err) // 在线服务需要解决这个问题 ，报错而不能panic
+		panic(err) // online service needs to solve this problem, panic instead of error
 	}
 	return &connection{
 		id:   id,
@@ -72,7 +71,7 @@ func (c *connection) BindEpoller(e *epoller) {
 	c.e = e
 }
 
-// 这里的锁会自旋，不会多么影响性能，主要是临界区小
+// The lock will spin, but it will not affect performance much, mainly because the critical area is small
 func (w *ConnIDGenerater) NextID() (uint64, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -87,16 +86,16 @@ func (w *ConnIDGenerater) nextID() (uint64, error) {
 
 	if w.LastStamp == timeStamp {
 		w.Sequence = (w.Sequence + 1) & maxSequence
-		if w.Sequence == 0 { // 如果这里发生溢出，就等到下一个毫秒时再分配，这样就一定出现重复
+		if w.Sequence == 0 { // if there is overflow here, then wait until the next millisecond to allocate, so there will be no repetition
 			for timeStamp <= w.LastStamp {
 				timeStamp = w.getMilliSeconds()
 			}
 		}
-	} else { // 如果与上次分配的时间戳不等，则为了防止可能的时钟飘移现象，就必须重新计数
+	} else { // if the timestamp is not equal to the last time, then in order to prevent possible clock drift, it must be re-counted
 		w.Sequence = 0
 	}
 	w.LastStamp = timeStamp
-	//减法可以压缩一下时间戳
+	// subtract to compress the timestamp
 	id := ((timeStamp - twepoch) << timeLeft) | w.Sequence
 	connID := uint64(id) | (version << versionLeft)
 	return connID, nil
