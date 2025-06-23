@@ -54,6 +54,7 @@ func NewConnection(conn *net.TCPConn) *connection {
 		conn: conn,
 	}
 }
+
 func (c *connection) Close() {
 	ep.tables.Delete(c.id)
 	if c.e != nil {

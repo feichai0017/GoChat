@@ -10,8 +10,9 @@ import (
 	"sync/atomic"
 	"syscall"
 
-	"github.com/feichai0017/GoChat/common/config"
 	"golang.org/x/sys/unix"
+
+	"github.com/feichai0017/GoChat/common/config"
 )
 
 // global object
@@ -59,11 +60,10 @@ func (e *ePool) createAcceptProcess() {
 				}
 				setTcpConifg(conn)
 				if e != nil {
-					if ne, ok := e.(net.Error); ok && ne.Temporary() {
-						fmt.Errorf("accept temp err: %v", ne)
-						continue
+					if ne, ok := e.(net.Error); ok && ne.Timeout() {
+						fmt.Errorf("[ERROR] accept timeout error: %v", ne)
 					}
-					fmt.Errorf("accept err: %v", e)
+					fmt.Errorf("[ERROR] accept err: %v", e)
 				}
 				c := NewConnection(conn)
 				ep.addTask(c)
@@ -92,13 +92,13 @@ func (e *ePool) startEProc() {
 				return
 			case conn := <-e.eChan:
 				addTcpNum()
-				fmt.Printf("tcpNum:%d\n", tcpNum)
+				fmt.Printf("[INFO] tcpNum:%d\n", tcpNum)
 				if err := ep.add(conn); err != nil {
-					fmt.Printf("failed to add connection %v\n", err)
+					fmt.Printf("[ERROR] failed to add connection %v\n", err)
 					conn.Close() // login failed, close connection directly
 					continue
 				}
-				fmt.Printf("EpollerPool new connection[%v] tcpSize:%d\n", conn.RemoteAddr(), tcpNum)
+				fmt.Printf("[INFO] EpollerPool new connection[%v] tcpSize:%d\n", conn.RemoteAddr(), tcpNum)
 			}
 		}
 	}()
@@ -110,7 +110,7 @@ func (e *ePool) startEProc() {
 		default:
 			connections, err := ep.wait(200) // 200ms once polling to avoid busy-waiting
 			if err != nil && err != syscall.EINTR {
-				fmt.Printf("failed to epoll wait %v\n", err)
+				fmt.Printf("[ERROR] failed to epoll wait %v\n", err)
 				continue
 			}
 			for _, conn := range connections {
@@ -143,15 +143,19 @@ func newEpoller() (*epoller, error) {
 	}, nil
 }
 
-// TODO: default level-triggered mode, can use non-blocking FD, optimize edge-triggered mode
+// used non-blocking FD, optimize edge-triggered mode
 func (e *epoller) add(conn *connection) error {
 	// Extract file descriptor associated with the connection
 	fd := conn.fd
 	// Set socket to non-blocking mode
 	if err := unix.SetNonblock(fd, true); err != nil {
-		return fmt.Errorf("failed to set socket non-blocking: %v", err)
+		return fmt.Errorf("[ERROR] failed to set socket non-blocking: %v", err)
 	}
-	err := unix.EpollCtl(e.fd, syscall.EPOLL_CTL_ADD, fd, &unix.EpollEvent{Events: unix.EPOLLIN | unix.EPOLLHUP, Fd: int32(fd)})
+	// Use Edge-Triggered mode for better performance
+	err := unix.EpollCtl(e.fd, syscall.EPOLL_CTL_ADD, fd, &unix.EpollEvent{
+		Events: unix.EPOLLIN | unix.EPOLLHUP | unix.EPOLLET, // Add EPOLLET for edge-triggered
+		Fd:     int32(fd),
+	})
 	if err != nil {
 		return err
 	}

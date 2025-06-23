@@ -39,14 +39,14 @@ func SendMsg(ctx *context.Context, endpoint string, connID uint64, Payload []byt
 	rpcCtx, cancel := context.WithTimeout(*ctx, 100*time.Millisecond)
 	defer cancel()
 
-	fmt.Println("sendMsg", connID, string(Payload))
+	fmt.Println("[INFO] sendMsg", connID, string(Payload))
 	_, err := stateClient.SendMsg(rpcCtx, &service.StateRequest{
 		Endpoint: endpoint,
 		ConnID:   connID,
 		Data:     Payload,
 	})
 	if err != nil {
-		fmt.Println("sendMsg error", err)
+		fmt.Println("[ERROR] sendMsg error", err)
 		panic(err)
 	}
 	return nil

@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 
 	"google.golang.org/protobuf/proto"
+
 	"github.com/feichai0017/GoChat/common/idl/message"
 	"github.com/feichai0017/GoChat/common/tcp"
 )
@@ -29,7 +30,7 @@ func newConnet(ip net.IP, port int) *connect {
 	addr := &net.TCPAddr{IP: ip, Port: port}
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
-		fmt.Printf("DialTCP.err=%+v", err)
+		fmt.Printf("[ERROR] DialTCP.err=%+v", err)
 		return nil
 	}
 	clientConn.conn = conn
@@ -73,12 +74,12 @@ func (c *connect) reConn() {
 	addr := &net.TCPAddr{IP: c.ip, Port: c.port}
 	conn, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
-		fmt.Printf("DialTCP.err=%+v", err)
+		fmt.Printf("[ERROR] DialTCP.err=%+v", err)
 	}
 	c.conn = conn
 }
 func (c *connect) send(ty message.CmdType, palyload []byte) error {
-	// 直接发送给接收方
+	// Directly send to receiver
 	msgCmd := message.MsgCmd{
 		Type:    ty,
 		Payload: palyload,
@@ -100,6 +101,6 @@ func (c *connect) recv() <-chan *Message {
 }
 
 func (c *connect) close() {
-	// 目前没啥值得回收的
+	// Nothing to recycle for now
 	c.conn.Close()
 }

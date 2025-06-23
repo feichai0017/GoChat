@@ -45,13 +45,13 @@ func cmdHandler() {
 	for cmdCtx := range cs.server.CmdChannel {
 		switch cmdCtx.Cmd {
 		case service.CancelConnCmd:
-			fmt.Printf("cancel conn endpoint:%s, coonID:%d, data:%+v\n", cmdCtx.Endpoint, cmdCtx.ConnID, cmdCtx.Payload)
+			fmt.Printf("[INFO] cancel conn endpoint:%s, coonID:%d, data:%+v\n", cmdCtx.Endpoint, cmdCtx.ConnID, cmdCtx.Payload)
 			cs.connLogOut(*cmdCtx.Ctx, cmdCtx.ConnID)
 		case service.SendMsgCmd:
 			msgCmd := &message.MsgCmd{}
 			err := proto.Unmarshal(cmdCtx.Payload, msgCmd)
 			if err != nil {
-				fmt.Printf("SendMsgCmd:err=%s\n", err.Error())
+				fmt.Printf("[ERROR] SendMsgCmd:err=%s\n", err.Error())
 			}
 			msgCmdHandler(cmdCtx, msgCmd)
 		}
@@ -79,12 +79,12 @@ func loginMsgHandler(cmdCtx *service.CmdContext, msgCmd *message.MsgCmd) {
 	loginMsg := &message.LoginMsg{}
 	err := proto.Unmarshal(msgCmd.Payload, loginMsg)
 	if err != nil {
-		fmt.Printf("loginMsgHandler:err=%s\n", err.Error())
+		fmt.Printf("[ERROR] loginMsgHandler:err=%s\n", err.Error())
 		return
 	}
 	if loginMsg.Head != nil {
 		// this will send login msg to business layer for processing
-		fmt.Println("loginMsgHandler", loginMsg.Head.DeviceID)
+		fmt.Println("[INFO] loginMsgHandler", loginMsg.Head.DeviceID)
 	}
 	err = cs.connLogin(*cmdCtx.Ctx, loginMsg.Head.DeviceID, cmdCtx.ConnID)
 	if err != nil {
@@ -98,11 +98,11 @@ func hearbeatMsgHandler(cmdCtx *service.CmdContext, msgCmd *message.MsgCmd) {
 	heartMsg := &message.HeartbeatMsg{}
 	err := proto.Unmarshal(msgCmd.Payload, heartMsg)
 	if err != nil {
-		fmt.Printf("hearbeatMsgHandler:err=%s\n", err.Error())
+		fmt.Printf("[ERROR] hearbeatMsgHandler:err=%s\n", err.Error())
 		return
 	}
 	cs.reSetHeartTimer(cmdCtx.ConnID)
-	fmt.Printf("hearbeatMsgHandler connID=%d\n", cmdCtx.ConnID)
+	fmt.Printf("[INFO] hearbeatMsgHandler connID=%d\n", cmdCtx.ConnID)
 	// TODO: not reduce communication, can temporarily not reply heartbeat ack
 }
 
@@ -113,7 +113,7 @@ func reConnMsgHandler(cmdCtx *service.CmdContext, msgCmd *message.MsgCmd) {
 	var code uint32
 	msg := "reconn ok"
 	if err != nil {
-		fmt.Printf("reConnMsgHandler:err=%s\n", err.Error())
+		fmt.Printf("[ERROR] reConnMsgHandler:err=%s\n", err.Error())
 		return
 	}
 	// the connID in the re-connection message header is the connID of the last disconnected connection
@@ -129,7 +129,7 @@ func upMsgHandler(cmdCtx *service.CmdContext, msgCmd *message.MsgCmd) {
 	upMsg := &message.UPMsg{}
 	err := proto.Unmarshal(msgCmd.Payload, upMsg)
 	if err != nil {
-		fmt.Printf("upMsgHandler:err=%s\n", err.Error())
+		fmt.Printf("[ERROR] upMsgHandler:err=%s\n", err.Error())
 		return
 	}
 	if cs.compareAndIncrClientID(*cmdCtx.Ctx, cmdCtx.ConnID, upMsg.Head.ClientID) {
@@ -145,7 +145,7 @@ func ackMsgHandler(cmdCtx *service.CmdContext, msgCmd *message.MsgCmd) {
 	ackMsg := &message.ACKMsg{}
 	err := proto.Unmarshal(msgCmd.Payload, ackMsg)
 	if err != nil {
-		fmt.Printf("ackMsgHandler:err=%s\n", err.Error())
+		fmt.Printf("[ERROR] ackMsgHandler:err=%s\n", err.Error())
 		return
 	}
 	cs.ackLastMsg(*cmdCtx.Ctx, ackMsg.ConnID, ackMsg.SessionID, ackMsg.MsgID)
@@ -159,7 +159,7 @@ func pushMsg(ctx context.Context, connID, sessionID, msgID uint64, data []byte) 
 		MsgID:   cs.msgID,
 	}
 	if data, err := proto.Marshal(pushMsg); err != nil {
-		fmt.Printf("Marshal:err=%s\n", err.Error())
+		fmt.Printf("[ERROR] Marshal:err=%s\n", err.Error())
 	} else {
 		//TODO: here will involve down-stream message sending, whether successfully or not, last msg should be updated
 		sendMsg(connID, message.CmdType_Push, data)
@@ -180,7 +180,7 @@ func sendACKMsg(ackType message.CmdType, connID, clientID uint64, code uint32, m
 	ackMsg.ClientID = clientID
 	downLoad, err := proto.Marshal(ackMsg)
 	if err != nil {
-		fmt.Println("sendACKMsg", err)
+		fmt.Println("[ERROR] sendACKMsg", err)
 	}
 	sendMsg(connID, message.CmdType_ACK, downLoad)
 }
@@ -193,7 +193,7 @@ func sendMsg(connID uint64, ty message.CmdType, downLoad []byte) {
 	data, err := proto.Marshal(mc)
 	ctx := context.TODO()
 	if err != nil {
-		fmt.Println("sendMsg", ty, err)
+		fmt.Println("[ERROR] sendMsg", ty, err)
 	}
 	client.Push(&ctx, connID, data)
 }

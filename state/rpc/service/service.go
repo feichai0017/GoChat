@@ -46,7 +46,7 @@ func (s *Service) SendMsg(ctx context.Context, sr *StateRequest) (*StateResponse
 		Endpoint: sr.GetEndpoint(),
 		Payload:  sr.GetData(),
 	}
-	fmt.Printf("SendMsg connID=%d, channel=%d\n", sr.ConnID, len(s.CmdChannel))
+	fmt.Printf("[INFO] SendMsg connID=%d, channel=%d\n", sr.ConnID, len(s.CmdChannel))
 	return &StateResponse{
 		Code: 0,
 		Msg:  "success",

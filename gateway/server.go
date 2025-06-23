@@ -23,7 +23,7 @@ func RunMain(path string) {
 	config.Init(path)
 	ln, err := net.ListenTCP("tcp", &net.TCPAddr{Port: config.GetGatewayTCPServerPort()})
 	if err != nil {
-		log.Fatalf("StartTCPEPollServer err:%s", err.Error())
+		log.Fatalf("[FATAL] StartTCPEPollServer err:%s", err.Error())
 		panic(err)
 	}
 	initWorkPool()
@@ -48,8 +48,9 @@ func RunMain(path string) {
 
 func runProc(c *connection, ep *epoller) {
 	ctx := context.Background() // initial context
-	// step1: read a complete message package
-	dataBuf, err := tcp.ReadData(c.conn)
+
+	// Edge-triggered mode: read all available messages at once
+	messages, err := tcp.ReadDataNonBlocking(c.conn)
 	if err != nil {
 		// if the connection is closed when reading the conn, close the connection directly
 		// notify state to clean up the status information of the unexpected exit conn
@@ -60,12 +61,22 @@ func runProc(c *connection, ep *epoller) {
 		}
 		return
 	}
-	err = wPool.Submit(func() {
-		// step2: send the message to state server rpc
-		client.SendMsg(&ctx, getEndpoint(), c.id, dataBuf)
-	})
-	if err != nil {
-		fmt.Errorf("runProc:err:%+v\n", err.Error())
+
+	// Log batch processing info for performance monitoring
+	if len(messages) > 1 {
+		fmt.Printf("[INFO] ET mode batch processing: conn[%v] processed %d messages\n", c.RemoteAddr(), len(messages))
+	}
+
+	// Process all messages in batch
+	for _, dataBuf := range messages {
+		// Submit each message to worker pool
+		err = wPool.Submit(func() {
+			// step2: send the message to state server rpc
+			client.SendMsg(&ctx, getEndpoint(), c.id, dataBuf)
+		})
+		if err != nil {
+			fmt.Errorf("[ERROR] runProc:err:%+v\n", err.Error())
+		}
 	}
 }
 

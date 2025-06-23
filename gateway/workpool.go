@@ -3,10 +3,10 @@ package gateway
 import (
 	"fmt"
 
-	"github.com/feichai0017/GoChat/common/config"
 	"github.com/panjf2000/ants/v2"
-)
 
+	"github.com/feichai0017/GoChat/common/config"
+)
 
 var wPool *ants.Pool
 
