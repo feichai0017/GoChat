@@ -7,14 +7,14 @@ import (
 )
 
 func TestServiceDiscovery(t *testing.T) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
 	ser := NewServiceDiscovery(&ctx)
 	defer ser.Close()
-	ser.WatchService("/web/", func(key, value string) {}, func(key, value string) {})
-	ser.WatchService("/gRPC/", func(key, value string) {}, func(key, value string) {})
-	for {
-		select {
-		case <-time.Tick(10 * time.Second):
-		}
-	}
+
+	go ser.WatchService("/web/", func(key, value string) {}, func(key, value string) {})
+	go ser.WatchService("/gRPC/", func(key, value string) {}, func(key, value string) {})
+
+	<-ctx.Done()
 }
