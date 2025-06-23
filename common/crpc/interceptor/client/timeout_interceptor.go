@@ -31,7 +31,7 @@ func TimeoutUnaryClientInterceptor(timeout time.Duration, slowThreshold time.Dur
 		}
 
 		if slowThreshold > time.Duration(0) && du > slowThreshold {
-			logger.CtxErrorf(ctx, "grpc slowlog:method%s,tagert:%s,cost:%v,remotIP:%s", method, cc.Target(), du, remoteIP)
+			logger.CtxErrorf(ctx, "grpc slowlog:method%s,target:%s,cost:%v,remoteIP:%s", method, cc.Target(), du, remoteIP)
 		}
 		return err
 	}
