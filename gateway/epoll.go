@@ -143,7 +143,7 @@ func newEpoller() (*epoller, error) {
 	}, nil
 }
 
-// used non-blocking FD, optimize edge-triggered mode
+// TODO: used non-blocking FD, optimize edge-triggered mode
 func (e *epoller) add(conn *connection) error {
 	// Extract file descriptor associated with the connection
 	fd := conn.fd
@@ -153,7 +153,7 @@ func (e *epoller) add(conn *connection) error {
 	}
 	// Use Edge-Triggered mode for better performance
 	err := unix.EpollCtl(e.fd, syscall.EPOLL_CTL_ADD, fd, &unix.EpollEvent{
-		Events: unix.EPOLLIN | unix.EPOLLHUP | unix.EPOLLET, // Add EPOLLET for edge-triggered
+		Events: unix.EPOLLIN | unix.EPOLLHUP,
 		Fd:     int32(fd),
 	})
 	if err != nil {
