@@ -164,10 +164,7 @@ func (chat *Chat) reConn() {
 
 func (chat *Chat) heartbeat() {
 	tc := time.NewTicker(1 * time.Second)
-	defer func() {
-		chat.heartbeat()
-	}()
-loop:
+	defer tc.Stop()
 	for {
 		select {
 		case <-chat.closeChan:
@@ -180,9 +177,8 @@ loop:
 			if err != nil {
 				panic(err)
 			}
-			err = chat.conn.send(message.CmdType_Heartbeat, palyload)
-			if err != nil {
-				goto loop
+			if err = chat.conn.send(message.CmdType_Heartbeat, palyload); err != nil {
+				continue
 			}
 		}
 	}
