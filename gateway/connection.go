@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -28,10 +29,10 @@ type ConnIDGenerater struct {
 }
 
 type connection struct {
-	id   uint64 // unique ID
-	fd   int
-	e    *epoller
-	conn *net.TCPConn
+	id      uint64 // unique ID
+	fd      int
+	e       *epoller
+	conn    *net.TCPConn
 }
 
 func init() {
@@ -49,9 +50,9 @@ func NewConnection(conn *net.TCPConn) *connection {
 		panic(err) // online service needs to solve this problem, panic instead of error
 	}
 	return &connection{
-		id:   id,
-		fd:   socketFD(conn),
-		conn: conn,
+		id:      id,
+		fd:      socketFD(conn),
+		conn:    conn,
 	}
 }
 
@@ -60,8 +61,10 @@ func (c *connection) Close() {
 	if c.e != nil {
 		c.e.fdToConnTable.Delete(c.fd)
 	}
-	err := c.conn.Close()
-	panic(err)
+	// Don't panic on close error - just log it
+	if err := c.conn.Close(); err != nil {
+		fmt.Printf("[WARN] connection close error: %v\n", err)
+	}
 }
 
 func (c *connection) RemoteAddr() string {

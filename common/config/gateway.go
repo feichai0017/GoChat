@@ -9,7 +9,7 @@ func GetGatewayMaxTcpNum() int32 {
 }
 
 func GetGatewayEpollerChanNum() int {
-	return viper.GetInt("gateway.epoll_channel_size")
+	return viper.GetInt("gateway.epoll_channel_num")
 }
 func GetGatewayEpollerNum() int {
 	return viper.GetInt("gateway.epoll_num")
@@ -44,4 +44,8 @@ func GetGatewayRPCWeight() int {
 
 func GetGatewayStateServerEndPoint() string {
 	return viper.GetString("gateway.state_server_endpoint")
+}
+
+func GetGatewayEpollMode() string {
+	return viper.GetString("gateway.epoll_mode")
 }

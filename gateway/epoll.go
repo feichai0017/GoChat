@@ -9,6 +9,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	"golang.org/x/sys/unix"
 
@@ -61,9 +62,10 @@ func (e *ePool) createAcceptProcess() {
 				setTcpConifg(conn)
 				if e != nil {
 					if ne, ok := e.(net.Error); ok && ne.Timeout() {
-						fmt.Errorf("[ERROR] accept timeout error: %v", ne)
+						fmt.Printf("[ERROR] accept timeout error: %v\n", ne)
+					} else {
+						fmt.Printf("[ERROR] accept err: %v\n", e)
 					}
-					fmt.Errorf("[ERROR] accept err: %v", e)
 				}
 				c := NewConnection(conn)
 				ep.addTask(c)
@@ -131,6 +133,7 @@ func (e *ePool) addTask(c *connection) {
 type epoller struct {
 	fd            int
 	fdToConnTable sync.Map
+	closed        int32
 }
 
 func newEpoller() (*epoller, error) {
@@ -143,17 +146,16 @@ func newEpoller() (*epoller, error) {
 	}, nil
 }
 
-// TODO: used non-blocking FD, optimize edge-triggered mode
+// used non-blocking FD, optimize edge-triggered mode
 func (e *epoller) add(conn *connection) error {
 	// Extract file descriptor associated with the connection
 	fd := conn.fd
-	// Set socket to non-blocking mode
-	if err := unix.SetNonblock(fd, true); err != nil {
-		return fmt.Errorf("[ERROR] failed to set socket non-blocking: %v", err)
-	}
-	// Use Edge-Triggered mode for better performance
+
+	// Choose between Level-Triggered 
+	events := unix.EPOLLIN | unix.EPOLLHUP
+
 	err := unix.EpollCtl(e.fd, syscall.EPOLL_CTL_ADD, fd, &unix.EpollEvent{
-		Events: unix.EPOLLIN | unix.EPOLLHUP,
+		Events: uint32(events),
 		Fd:     int32(fd),
 	})
 	if err != nil {
@@ -229,4 +231,24 @@ func checkTcp() bool {
 
 func setTcpConifg(c *net.TCPConn) {
 	_ = c.SetKeepAlive(true)
+	_ = c.SetKeepAlivePeriod(30 * time.Second) // Set keepalive period
+	_ = c.SetNoDelay(true)                     // Disable Nagle's algorithm for low latency
+}
+
+// Close closes the epoll fd and cleans up resources
+func (e *epoller) Close() error {
+	if atomic.CompareAndSwapInt32(&e.closed, 0, 1) {
+		// Close all connections first
+		e.fdToConnTable.Range(func(key, value interface{}) bool {
+			if conn, ok := value.(*connection); ok {
+				conn.Close()
+			}
+			e.fdToConnTable.Delete(key)
+			return true
+		})
+
+		// Close epoll fd
+		return unix.Close(e.fd)
+	}
+	return nil
 }

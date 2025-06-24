@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
-	"syscall"
 	"time"
 )
 
@@ -49,72 +48,3 @@ func readFixedData(conn *net.TCPConn, buf []byte) error {
 	return nil
 }
 
-// ReadDataNonBlocking reads data in edge-triggered non-blocking mode
-// Returns all complete messages available in the socket buffer
-func ReadDataNonBlocking(conn *net.TCPConn) ([][]byte, error) {
-	var messages [][]byte
-	buffer := make([]byte, 8192) // 8KB buffer
-
-	// Read all available data from socket
-	allData := make([]byte, 0)
-	for {
-		n, err := conn.Read(buffer)
-		if err != nil {
-			if isEAGAIN(err) {
-				// No more data available
-				break
-			}
-			return messages, err
-		}
-		if n == 0 {
-			break
-		}
-		allData = append(allData, buffer[:n]...)
-	}
-
-	// Parse complete messages from the accumulated data
-	pos := 0
-	for pos < len(allData) {
-		// Need at least 4 bytes for length header
-		if pos+4 > len(allData) {
-			// Incomplete header, cannot process further
-			break
-		}
-
-		// Read message length
-		lenBytes := allData[pos : pos+4]
-		var messageLen uint32
-		buf := bytes.NewBuffer(lenBytes)
-		if err := binary.Read(buf, binary.BigEndian, &messageLen); err != nil {
-			return messages, fmt.Errorf("[ERROR] parse message length: %s", err.Error())
-		}
-
-		if messageLen <= 0 {
-			return messages, fmt.Errorf("[ERROR] invalid message length: %d", messageLen)
-		}
-
-		// Check if we have complete message
-		totalMsgSize := 4 + int(messageLen)
-		if pos+totalMsgSize > len(allData) {
-			// Incomplete message, cannot process further
-			break
-		}
-
-		// Extract complete message
-		messageData := allData[pos+4 : pos+totalMsgSize]
-		messages = append(messages, messageData)
-		pos += totalMsgSize
-	}
-
-	return messages, nil
-}
-
-// isEAGAIN checks if error is EAGAIN or EWOULDBLOCK
-func isEAGAIN(err error) bool {
-	if netErr, ok := err.(*net.OpError); ok {
-		if sysErr, ok := netErr.Err.(*syscall.Errno); ok {
-			return *sysErr == syscall.EAGAIN || *sysErr == syscall.EWOULDBLOCK
-		}
-	}
-	return false
-}
