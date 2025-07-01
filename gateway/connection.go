@@ -2,10 +2,10 @@ package gateway
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"sync"
 	"time"
+	"bytes"
 )
 
 var node *ConnIDGenerater
@@ -33,6 +33,7 @@ type connection struct {
 	fd      int
 	e       *epoller
 	conn    *net.TCPConn
+	readBuf bytes.Buffer // read buffer
 }
 
 func init() {
@@ -61,10 +62,8 @@ func (c *connection) Close() {
 	if c.e != nil {
 		c.e.fdToConnTable.Delete(c.fd)
 	}
-	// Don't panic on close error - just log it
-	if err := c.conn.Close(); err != nil {
-		fmt.Printf("[WARN] connection close error: %v\n", err)
-	}
+	err := c.conn.Close()
+	panic(err)
 }
 
 func (c *connection) RemoteAddr() string {

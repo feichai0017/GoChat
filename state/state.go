@@ -7,9 +7,10 @@ import (
 	"time"
 
 	"github.com/feichai0017/GoChat/common/cache"
-	"github.com/feichai0017/GoChat/common/router"
+	"github.com/feichai0017/GoChat/common/config"
 	"github.com/feichai0017/GoChat/common/timingwheel"
 	"github.com/feichai0017/GoChat/state/rpc/client"
+	"github.com/redis/go-redis/v9"
 )
 
 type connState struct {
@@ -25,6 +26,8 @@ type connState struct {
 func (c *connState) close(ctx context.Context) error {
 	c.Lock()
 	defer c.Unlock()
+
+	// 1. Stop local Go timers.
 	if c.heartTimer != nil {
 		c.heartTimer.Stop()
 	}
@@ -34,32 +37,14 @@ func (c *connState) close(ctx context.Context) error {
 	if c.msgTimer != nil {
 		c.msgTimer.Stop()
 	}
-	// TODO: how to ensure transactionality here, think about it, or whether it is necessary to ensure
-	// TODO: here can also use lua or pipeline to merge two redis operations as much as possible, which is effective in large-scale applications
-	// TODO: this is a good thing to think about, the time&space complexity of network calls
-	slotKey := cs.getLoginSlotKey(c.connID)
-	meta := cs.loginSlotMarshal(c.did, c.connID)
-	err := cache.SREM(ctx, slotKey, meta)
-	if err != nil {
-		return err
-	}
-
-	slot := cs.getConnStateSlot(c.connID)
-
-	key := fmt.Sprintf(cache.MaxClientIDKey, slot, c.connID)
-	err = cache.Del(ctx, key)
-	if err != nil {
-		return err
-	}
-
-	err = router.DelRecord(ctx, c.did)
-	if err != nil {
-		return err
-	}
-
-	lastMsg := fmt.Sprintf(cache.LastMsgKey, slot, c.connID)
-	err = cache.Del(ctx, lastMsg)
-	if err != nil {
+	// 2. Atomically clean up all distributed states using a single Lua script.
+	// This replaces multiple individual Redis calls.
+	slotSize := uint64(len(config.GetStateServerLoginSlotRange()))
+	_, err := cache.RunLua(ctx, cache.LuaCleanupConnection, nil, c.connID, c.did, slotSize)
+	
+	if err != nil && err != redis.Nil {
+		// Log a critical error, as this could lead to residual state in Redis.
+		// logger.ErrorCtx(ctx, "Failed to cleanup connection state atomically via Lua", "connID", c.connID, "err", err)
 		return err
 	}
 
@@ -80,7 +65,7 @@ func (c *connState) appendMsg(ctx context.Context, key, msgTimerLock string, msg
 		c.msgTimer.Stop()
 		c.msgTimer = nil
 	}
-	// 创建定时器
+	// create new timer
 	t := AfterFunc(100*time.Millisecond, func() {
 		rePush(c.connID)
 	})

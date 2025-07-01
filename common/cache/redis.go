@@ -3,13 +3,16 @@ package cache
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+
 	"github.com/feichai0017/GoChat/common/config"
 )
 
-// 声明一个全局的rdb变量，这是一个单机client
+// Declare rdb variable，this is a singleton client
 var rdb *redis.Client
 
 func InitRedis(ctx context.Context) {
@@ -109,7 +112,7 @@ func GetString(ctx context.Context, key string) (string, error) {
 	return cmd.String(), cmd.Err()
 }
 
-func RunLuaInt(ctx context.Context, name string, keys []string, args ...interface{}) (int, error) {
+func RunLuaInt(ctx context.Context, name string, keys []string, args ...any) (int, error) {
 	if part, ok := luaScriptTable[name]; !ok {
 		return -1, errors.New("lua not registered")
 	} else {
@@ -119,5 +122,25 @@ func RunLuaInt(ctx context.Context, name string, keys []string, args ...interfac
 		}
 
 		return cmd.Int()
+	}
+}
+
+// RunLua executes a pre-registered Lua script.
+// It handles NOSCRIPT errors by automatically reloading the script once.
+func RunLua(ctx context.Context, scriptName string, keys []string, args ...any) (*redis.Cmd, error) {
+	if part, ok := luaScriptTable[scriptName]; !ok {
+		return nil, fmt.Errorf("lua script not registered: %s", scriptName)
+	} else {
+		cmd := rdb.EvalSha(ctx, part.Sha, keys, args...)
+		if cmd.Err() != nil && strings.HasPrefix(cmd.Err().Error(), "NOSCRIPT") {
+			// If the script is not loaded in Redis, load it and retry.
+			newSha, err := rdb.ScriptLoad(ctx, part.LuaScript).Result()
+			if err != nil {
+				return nil, fmt.Errorf("failed to load lua script %s: %w", scriptName, err)
+			}
+			part.Sha = newSha // Update the SHA in memory for next time
+			cmd = rdb.EvalSha(ctx, part.Sha, keys, args...)
+		}
+		return cmd, cmd.Err()
 	}
 }

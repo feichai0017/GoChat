@@ -89,9 +89,8 @@ curl http://localhost:2379/version
 # Check Redis
 redis-cli ping
 ```
-```
 
-## Future Plans ��
+## Future Plans 
 
 ### Phase 1: Core Features
 - [ ] User authentication and authorization

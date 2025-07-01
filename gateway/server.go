@@ -1,19 +1,23 @@
 package gateway
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net"
+	"syscall"
+
+	"google.golang.org/grpc"
 
 	"github.com/feichai0017/GoChat/common/config"
 	"github.com/feichai0017/GoChat/common/crpc"
 	"github.com/feichai0017/GoChat/common/tcp"
 	"github.com/feichai0017/GoChat/gateway/rpc/client"
 	"github.com/feichai0017/GoChat/gateway/rpc/service"
-	"google.golang.org/grpc"
 )
 
 var cmdChannel chan *service.CmdContext
@@ -47,29 +51,44 @@ func RunMain(path string) {
 }
 
 func runProc(c *connection, ep *epoller) {
-	ctx := context.Background() // initial context
 
-	// Edge-triggered mode: read all available messages at once
-	dataBuf, err := tcp.ReadData(c.conn)
-	if err != nil {
-		// if the connection is closed when reading the conn, close the connection directly
-		// notify state to clean up the status information of the unexpected exit conn
-		if errors.Is(err, io.EOF) {
-			// this step is asynchronous, does not need to wait for the return success, because the message reliability is guaranteed by the protocol rather than a single cmd
-			ep.remove(c)
-			client.CancelConn(&ctx, getEndpoint(), c.id, nil)
+	// Start a loop, because ET mode requires reading all data at once
+	for {
+		// Create a temporary buffer to read data from the socket
+		tempBuf := make([]byte, 4096)
+		n, err := c.conn.Read(tempBuf)
+
+		if n > 0 {
+			// Write the received data into the dedicated buffer for this connection
+			c.readBuf.Write(tempBuf[:n])
 		}
-		return
+
+		if err != nil {
+			// EAGAIN or EWOULDBLOCK means kernel buffer has been fully read, this is the normal exit condition in ET mode
+			if errors.Is(err, syscall.EAGAIN) || errors.Is(err, syscall.EWOULDBLOCK) {
+				break // Exit the read loop
+			}
+
+			// EOF or other errors mean the connection is closed or has an error
+			if errors.Is(err, io.EOF) {
+				// Connection closea
+				fmt.Printf("[ERROR] Connection %d closed with error: %v", c.id, err)
+				ctx := context.Background()
+				ep.remove(c)
+				client.CancelConn(&ctx, getEndpoint(), c.id, nil)
+			}
+			
+			return // Stop handling this connection
+		}
+
+		// If a single Read fills the buffer, there may still be data remaining, so continue reading
+		if n < len(tempBuf) {
+			break // Kernel buffer has been fully read
+		}
 	}
 
-	// Submit each message to worker pool
-	err = wPool.Submit(func() {
-		// step2: send the message to state server rpc
-		client.SendMsg(&ctx, getEndpoint(), c.id, dataBuf)
-	})
-	if err != nil {
-		fmt.Errorf("[ERROR] runProc:err:%+v\n", err.Error())
-	}
+	// After all read operations are complete, perform centralized packet parsing and forwarding for the buffer
+	parseAndForward(c)
 }
 
 func cmdHandler() {
@@ -104,4 +123,33 @@ func sendMsgByCmd(cmd *service.CmdContext) {
 
 func getEndpoint() string {
 	return fmt.Sprintf("%s:%d", config.GetGatewayServiceAddr(), config.GetGatewayRPCServerPort())
+}
+func parseAndForward(c *connection) {
+	for {
+		// Packet header length is 4 bytes (uint32)
+		if c.readBuf.Len() < 4 {
+			break // Not enough data in buffer for a complete header, exit
+		}
+
+		headerBytes := c.readBuf.Bytes()[:4]
+		var dataLen uint32
+		// Use binary.Read to parse the length from the byte stream
+		binary.Read(bytes.NewReader(headerBytes), binary.BigEndian, &dataLen)
+
+		if uint32(c.readBuf.Len()) < 4+dataLen {
+			break // Not enough data for a complete packet, wait for next read
+		}
+
+		// Skip the 4-byte header that has already been read
+		c.readBuf.Next(4)
+		// Read the packet body
+		fullMessage := make([]byte, dataLen)
+		c.readBuf.Read(fullMessage)
+
+		// Asynchronously submit to the worker pool for processing
+		wPool.Submit(func() {
+			ctx := context.Background()
+			client.SendMsg(&ctx, getEndpoint(), c.id, fullMessage)
+		})
+	}
 }

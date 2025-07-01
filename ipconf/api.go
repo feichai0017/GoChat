@@ -6,13 +6,14 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/common/utils"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+
 	"github.com/feichai0017/GoChat/ipconf/domain"
 )
 
 type Response struct {
-	Message string 		`json:"message"`
-	Code    int    		`json:"code"`
-	Data    interface{} `json:"data"`
+	Message string `json:"message"`
+	Code    int    `json:"code"`
+	Data    any    `json:"data"`
 }
 
 // GetIpInfoList API adapte application layer

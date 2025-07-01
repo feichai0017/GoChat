@@ -151,8 +151,13 @@ func (e *epoller) add(conn *connection) error {
 	// Extract file descriptor associated with the connection
 	fd := conn.fd
 
-	// Choose between Level-Triggered 
-	events := unix.EPOLLIN | unix.EPOLLHUP
+	// Set socket to non-blocking mode
+	if err := unix.SetNonblock(fd, true); err != nil {
+		return fmt.Errorf("[ERROR] failed to set socket non-blocking: %v", err)
+	}
+
+	// Choose Edge-Triggered mode
+	events := unix.EPOLLIN | unix.EPOLLHUP | unix.EPOLLET
 
 	err := unix.EpollCtl(e.fd, syscall.EPOLL_CTL_ADD, fd, &unix.EpollEvent{
 		Events: uint32(events),
