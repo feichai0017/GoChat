@@ -1,3 +1,5 @@
+
+
 # GoChat - A Distributed IM System 🚀
 
 GoChat is a high-performance distributed instant messaging system built with Go, featuring a microservices architecture and custom RPC framework.
@@ -78,6 +80,8 @@ make all
 ./bin/gochat client
 ```
 
+The `gochat client` command starts a CUI client that targets the Gateway's default TCP port, `8900`.
+
 ### 3. Verify Services
 
 You can verify the services are running correctly:
@@ -117,5 +121,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License 📄
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-```
-
